@@ -4,13 +4,7 @@ Examen práctico del segundo parcial · Arquitectura de Computadoras
 
 Aplicación de órdenes de venta con tres contenedores orquestados con Docker Compose: **SQL Server 2022** → **API Flask** → **Frontend Django**.
 
-## 👥 Integrantes
-
-| # | Nombre completo | Número de cuenta |
-|---|-----------------|------------------|
-| 1 | NOMBRE APELLIDO | 0000000000 |
-| 2 | NOMBRE APELLIDO | 0000000000 |
-| 3 | NOMBRE APELLIDO | 0000000000 |
+## alumna:Edith Marizol Palencia Diaz-202230120024
 
 ## 🏗️ Arquitectura
 
