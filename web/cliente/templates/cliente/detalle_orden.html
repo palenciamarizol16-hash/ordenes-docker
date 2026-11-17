@@ -1,0 +1,85 @@
+{% extends "cliente/base.html" %}
+{% block title %}Orden #{{ orden.id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Orden #{{ orden.id }}</h1>
+  <div>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'editar_orden' orden.id %}">Editar orden</a>
+    <a class="btn btn-outline-dark btn-sm" href="{% url 'lista_ordenes' %}">← Volver</a>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body row">
+    <div class="col-md-3"><strong>Cliente</strong><br>{{ orden.cliente }}</div>
+    <div class="col-md-3"><strong>Fecha</strong><br>{{ orden.fecha }}</div>
+    <div class="col-md-3"><strong>Estado</strong><br>{{ orden.estado }}</div>
+    <div class="col-md-3"><strong>Total</strong><br><span class="fs-5">{{ orden.total|floatformat:2 }}</span></div>
+  </div>
+</div>
+
+<h2 class="h5">Productos de la orden</h2>
+
+<form id="form-agregar" method="post" action="{% url 'agregar_detalle' orden.id %}">{% csrf_token %}</form>
+{% if editar_id %}
+<form id="form-editar" method="post" action="{% url 'editar_detalle' orden.id editar_id %}">{% csrf_token %}</form>
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Producto</th><th style="width:110px">Cantidad</th>
+          <th style="width:150px">Precio unit.</th>
+          <th class="text-end" style="width:120px">Subtotal</th>
+          <th class="text-end" style="width:210px">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in detalles %}
+          {% if d.id == editar_id %}
+          <tr class="table-warning">
+            <td><input form="form-editar" class="form-control form-control-sm" name="producto" maxlength="100" required value="{{ d.producto }}"></td>
+            <td><input form="form-editar" class="form-control form-control-sm" type="number" min="1" step="1" name="cantidad" required value="{{ d.cantidad }}"></td>
+            <td><input form="form-editar" class="form-control form-control-sm" type="number" min="0" step="0.01" name="precio_unitario" required value="{{ d.precio_unitario|stringformat:'.2f' }}"></td>
+            <td class="text-end">{{ d.subtotal|floatformat:2 }}</td>
+            <td class="text-end">
+              <button form="form-editar" class="btn btn-primary btn-sm">Guardar</button>
+              <a class="btn btn-outline-secondary btn-sm" href="{% url 'detalle_orden' orden.id %}">Cancelar</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td>{{ d.producto }}</td>
+            <td>{{ d.cantidad }}</td>
+            <td>{{ d.precio_unitario|floatformat:2 }}</td>
+            <td class="text-end">{{ d.subtotal|floatformat:2 }}</td>
+            <td class="text-end">
+              <a class="btn btn-outline-secondary btn-sm" href="{% url 'detalle_orden' orden.id %}?editar={{ d.id }}">Editar</a>
+              <form method="post" action="{% url 'eliminar_detalle' orden.id d.id %}" class="d-inline"
+                    onsubmit="return confirm('¿Eliminar este producto de la orden?');">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger btn-sm">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          {% endif %}
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-3">Esta orden aún no tiene productos.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="table-light">
+        <tr>
+          <td><input form="form-agregar" class="form-control form-control-sm" name="producto" maxlength="100" placeholder="Producto" required></td>
+          <td><input form="form-agregar" class="form-control form-control-sm" type="number" min="1" step="1" name="cantidad" placeholder="Cant." required></td>
+          <td><input form="form-agregar" class="form-control form-control-sm" type="number" min="0" step="0.01" name="precio_unitario" placeholder="Precio" required></td>
+          <td></td>
+          <td class="text-end"><button form="form-agregar" class="btn btn-success btn-sm">+ Agregar</button></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

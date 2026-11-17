@@ -1,0 +1,118 @@
+name: ordenes-docker
+
+services:
+  # ---------- 1) BASE DE DATOS ----------
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ordenes-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Falta MSSQL_SA_PASSWORD en el archivo .env}
+      MSSQL_PID: Developer
+      MSSQL_MEMORY_LIMIT_MB: "1536"
+    volumes:
+      - sqldata:/var/opt/mssql
+    networks:
+      - ordenes-net
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2g
+    restart: unless-stopped
+
+  # ---------- 1b) INICIALIZACIÓN (ejecuta db/init.sql con sqlcmd) ----------
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ordenes-db-init
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    volumes:
+      - ./db/init.sql:/init.sql:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["/opt/mssql-tools18/bin/sqlcmd -C -S db -U sa -P \"$$MSSQL_SA_PASSWORD\" -b -i /init.sql"]
+    networks:
+      - ordenes-net
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+
+  # ---------- 2) API REST (Flask) ----------
+  api:
+    build: ./api
+    image: ${DOCKERHUB_USER:-tuusuario}/ordenes-api:v1.0
+    container_name: ordenes-api
+    environment:
+      DB_HOST: db
+      DB_PORT: "1433"
+      DB_NAME: OrdenesDB
+      DB_USER: sa
+      DB_PASSWORD: ${MSSQL_SA_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    ports:
+      - "5000:5000"
+    networks:
+      - ordenes-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+    restart: unless-stopped
+
+  # ---------- 3) FRONTEND (Django) ----------
+  web:
+    build: ./web
+    image: ${DOCKERHUB_USER:-tuusuario}/ordenes-web:v1.0
+    container_name: ordenes-web
+    environment:
+      API_URL: http://api:5000
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-cambia-esta-clave-en-el-env}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - ordenes-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+    restart: unless-stopped
+
+networks:
+  ordenes-net:
+    driver: bridge
+
+volumes:
+  sqldata:

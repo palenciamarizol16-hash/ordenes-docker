@@ -1,0 +1,33 @@
+{% extends "cliente/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3">{{ titulo }}</h1>
+
+<div class="card shadow-sm" style="max-width: 560px;">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label" for="cliente">Cliente</label>
+        <input class="form-control" id="cliente" name="cliente" maxlength="100" required value="{{ orden.cliente|default:'' }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="fecha">Fecha</label>
+        <input class="form-control" type="date" id="fecha" name="fecha" required value="{{ orden.fecha|default:'' }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="estado">Estado</label>
+        <select class="form-select" id="estado" name="estado">
+          {% for e in estados %}
+            <option value="{{ e }}" {% if orden.estado == e %}selected{% endif %}>{{ e }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <p class="text-muted small">El total se calcula automáticamente con los productos de la orden.</p>
+      <button class="btn btn-primary">Guardar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'lista_ordenes' %}">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
